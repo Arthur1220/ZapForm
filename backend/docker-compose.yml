@@ -1,0 +1,41 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: zapform_db
+    environment:
+      POSTGRES_USER: zapform_user
+      POSTGRES_PASSWORD: zapform_pass
+      POSTGRES_DB: zapform_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zapform_user -d zapform_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    container_name: zapform_api
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app
+      - ./seed.py:/app/seed.py
+      - ./test_models.py:/app/test_models.py
+      - ./test_webhook.py:/app/test_webhook.py
+      - ./verify_database.py:/app/verify_database.py
+      - ./test_services.py:/app/test_services.py
+      - ./test_ai_service.py:/app/test_ai_service.py
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
